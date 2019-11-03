@@ -48,7 +48,7 @@ def cal_macd(ts_code, end_date, short_=12, long_=26, m=9):
     data['macd'] = 2*(data['diff'] - data['dea'])
     macd = data.loc[len(data)-1, "macd"]
     
-    return macd
+    return macd, data['macd']
 
 def cal_ma(ts_code, start_date, end_date, short_=2, long_=5):
     data = ts.pro_bar(ts_code=ts_code, start_date=start_date, end_date=end_date, ma=[short_, long_])
