@@ -53,7 +53,9 @@ def cal_macd(ts_code, end_date=None, short_=12, long_=26, m=9):
     macd = data_macd.iloc[-1]
     his_macd_discount = len(data_macd[data_macd > 0]) / len(data_macd)
     
-    return macd, data_macd, his_macd_discount
+    macd_trend = True if data_macd.iloc[-1] > data_macd.iloc[-2] else Flase
+    
+    return macd, data_macd, his_macd_discount, macd_trend
 
 def cal_ma(ts_code, start_date, end_date, short_=2, long_=5, pct_chg_short=3, pct_chg_long=5):
     data = ts.pro_bar(ts_code=ts_code, start_date=start_date, end_date=end_date, ma=[short_, long_])
@@ -61,14 +63,10 @@ def cal_ma(ts_code, start_date, end_date, short_=2, long_=5, pct_chg_short=3, pc
     ma2_1, ma2_2 = data.loc[1, "ma{}".format(short_)], data.loc[0, "ma{}".format(short_)]
     ma5_1, ma5_2 = data.loc[1, "ma{}".format(long_)], data.loc[0, "ma{}".format(long_)]
     
-    amount_discount = data["amount"][:len(amount_discount)/2].mean() / data["amount"].mean()
+    amount_mean = data["amount"].mean()
+    ptc_chg_short = data["pct_chg"][:pct_chg_short].sum()
     
-    ptc_chg = [
-        data["pct_chg"][:pct_chg_short].sum(),
-        data["pct_chg"][:pct_chg_long].sum()
-    ]
-    
-    return ma2_1, ma2_2, ma5_1, ma5_2, amount_discount, ptc_chg
+    return ma2_1, ma2_2, ma5_1, ma5_2, amount_mean, ptc_chg_short
 
 def negetive_macd_judge(data_macd):
     
