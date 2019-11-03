@@ -2,10 +2,25 @@ from datetime import datetime
 from datetime import timedelta
 
 def add_zero(date):
+    
     nabs = abs(int(date))
     return str(nabs) if nabs>=10 else "0" + str(nabs)
 
-def get_date_months_before(month_n, year_n=0):
+def get_datetime_object(date):
+    
+    if date is None:
+        date = datetime.now()
+        
+    else:
+        year = int(date[:4])
+        month = int(date[4:6])
+        day = int(date[6:])
+        
+        date = datetime(year, month, day)
+    
+    return date
+
+def get_date_months_before(month_n, year_n=0, date=None):
     
     """Return the date months and years ago of current date.
     
@@ -22,17 +37,17 @@ def get_date_months_before(month_n, year_n=0):
         
     """
     
-    date = datetime.now()
+    date = get_datetime_object(date)
     
     this_year = date.year
     this_month = date.month
-    this_day = add_zero(1)
+    this_day = date.day if date.day <= 28 else 28
     
     total_month = this_month - (year_n * 12 + month_n)
     
     if 0 < total_month < 12: 
         total_month = add_zero(total_month)
-        return str(this_year) + total_month + this_day
+        return str(this_year) + total_month + str(this_day)
     else: 
         i = total_month // 12 
         j = total_month % 12 
@@ -41,9 +56,18 @@ def get_date_months_before(month_n, year_n=0):
             j = 12 
         this_year += i 
         j = add_zero(j) 
-        return str(this_year) + str(j) + this_day
+        return str(this_year) + str(j) + str(this_day)
+
+def get_date_weeks_before(week_n, date=None):
     
-def get_next_n_day(date, n_day=5):
+    date = get_datetime_object(date)
+    days = timedelta(days = 7 * week_n)
+    dayfrom = date - days
+    
+    return tramsform_datetime_to_str(dayfrom)
+    
+    
+def get_next_n_day(date=None, n_day=5):
     
     """Return the date next n days.
     
@@ -60,16 +84,23 @@ def get_next_n_day(date, n_day=5):
         
     """
     
-    year = int(date[:4])
-    month = int(date[4:6])
-    day = int(date[6:])
-    
-    date = datetime(year, month, day)
+    date = get_datetime_object(date)
     
     next_date = date + timedelta(days=n)
     
-    year = str(next_date.year)
-    month = str(add_zero(next_date.month))
-    day = str(add_zero(next_date.day))
+    return tramsform_datetime_to_str(date)
+
+def tramsform_datetime_to_str(date):
     
-    return year + month + day
+    this_year = date.year
+    this_month = add_zero(date.month)
+    this_day = add_zero(date.day)
+    
+    return str(this_year) + this_month + this_day
+
+def get_current_date():
+    
+    date = datetime.now()
+    
+    return tramsform_datetime_to_str(date)
+    
