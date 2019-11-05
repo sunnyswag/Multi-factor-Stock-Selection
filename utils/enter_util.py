@@ -12,7 +12,7 @@ def get_condidate_stock(trade_date=None):
     
     stock_list = pd.read_csv("../data_pulled/stock_list.csv")
     
-    columns = ["stock_code", "name", "pct_chg_short", "his_macd_discount", "amount_mean_20", "amount_discount_mean"]
+    columns = ["stock_code", "name", "pct_chg_short", "his_macd_discount", "vol_mean_20", "vol_discount_mean"]
     raw_choose_list = pd.DataFrame(columns = columns)
 
     ROOT_PATH = os.path.join("..", "data_pulled")
@@ -51,10 +51,10 @@ def get_condidate_stock(trade_date=None):
             data_macd = cur_detail["macd"][:cur_index+1]
             his_macd_discount = len(data_macd[data_macd > 0]) / len(data_macd)
 
-            # 近一个月成交量均值 / 近两个月成交量均值
-            amount_mean_20 = cur_detail["amount"][cur_index - 20:cur_index].mean()
-            amount_mean_40 = cur_detail["amount"][cur_index - 40:cur_index].mean()
-            amount_discount_mean = amount_mean_20 / amount_mean_40
+            # 近半个月成交额均值 / 近一个月成交额均值
+            vol_mean_10 = cur_detail["vol"][cur_index - 10:cur_index].mean()
+            vol_mean_20 = cur_detail["vol"][cur_index - 20:cur_index].mean()
+            vol_discount_mean = vol_mean_10 / vol_mean_20
 
             # 判断 macd：今天 > 0, 昨天 < 0
             if cur_macd > 0 and last_macd < 0:
@@ -63,7 +63,7 @@ def get_condidate_stock(trade_date=None):
                     # 判断 dif 和 dea 是否大于0，且小于正dif/dea的平均值
                     if 0 < cur_dif < pos_dif_mean and 0 < cur_dea < pos_dea_mean:
                         list_tmp = pd.DataFrame([[stock_code, name, ptc_chg_short, his_macd_discount,
-                                                  amount_mean_20, amount_discount_mean]], columns=columns)
+                                                  vol_mean_20, vol_discount_mean]], columns=columns)
                         raw_choose_list = raw_choose_list.append(list_tmp)
                     
     # 数据归一化
@@ -77,11 +77,11 @@ def get_condidate_stock(trade_date=None):
     # 排序
 
     def get_rank_factor(arr):
-        pct_chg_short = arr["pct_chg_short"] * 0.5
-        his_macd_discount = arr["his_macd_discount"]
-        amount_mean_20 = arr["amount_mean_20"] * 0.5
-        amount_discount_mean = arr["amount_discount_mean"] * 0.5
-        return pct_chg_short+his_macd_discount+amount_mean_20+amount_discount_mean
+        pct_chg_short = arr["pct_chg_short"] * 0.2
+        his_macd_discount = arr["his_macd_discount"] * 0.1
+        vol_mean_20 = arr["vol_mean_20"] * 0.25
+        vol_discount_mean = arr["vol_discount_mean"] * 0.25
+        return pct_chg_short+his_macd_discount+vol_mean_20+vol_discount_mean
 
     choose_list["rank_factor"] = choose_list.apply(get_rank_factor, axis = 1)
     choose_list = choose_list.sort_values(by="rank_factor", ascending= False).reset_index(drop=True)

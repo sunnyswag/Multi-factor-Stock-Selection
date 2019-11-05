@@ -1,6 +1,7 @@
 import tushare as ts
 import numpy as np
 import pandas as pd
+import os
 
 import sys
 sys.path.append("../utils/")
@@ -44,19 +45,37 @@ def get_stock_list(trade_date=None, delta_price=30.0):
     
     return stock_list
 
-def update_stock_daily():
-    pass
-
-def get_EMA(data, N):    
-    for i in range(len(data)):        
+def get_EMA(data, N, update):
+    
+    start = 1 if update else 0
+    
+    for i in range(start, len(data)):        
         if i == 0:            
-            data.loc[i,'ema'] = data.loc[i,'close']        
-        if i > 0:            
-            data.loc[i,'ema'] = (2*data.loc[i,'close']+(N-1)*data.loc[i-1,'ema'])/(N+1)
+            data.loc[i,'ema{}'.format(N)] = data.loc[i,'close']        
+        else:
+            data.loc[i,'ema{}'.format(N)] = (2*data.loc[i,'close']+(N-1)*data.loc[i-1,'ema{}'.format(N)])/(N+1)
             
-    return list(data['ema'])
+    return list(data['ema{}'.format(N)])
 
-def cal_macd(ts_code, freq=None, short_=12, long_=26, m=9, ema_short_=7, ema_long_=14, adj='qfq'):
+def cal_macd(data, short_, long_, m, update):
+    
+    ema_short = get_EMA(data, short_, update)
+    ema_long = get_EMA(data, long_, update)
+    data['diff'] = pd.Series(ema_short) - pd.Series(ema_long)
+    
+    start = 1 if update else 0
+    
+    for i in range(start, len(data)):
+        if i == 0:
+            data.loc[i, 'dea'] = data.loc[i,'diff']        
+        else:
+            data.loc[i, 'dea'] = (2*data.loc[i,'diff'] + (m-1)*data.loc[i-1,'dea'])/(m+1)  
+            
+    data["macd"] = 2 * (data['diff'] - data['dea'])
+    
+    return data
+
+def pull_data(ts_code, root_dir, freq=None, short_=12, long_=26, m=9, adj='qfq'):
     
     '''    
     计算公式：
@@ -75,28 +94,58 @@ def cal_macd(ts_code, freq=None, short_=12, long_=26, m=9, ema_short_=7, ema_lon
     '''
     
     if freq is None:
-        data = ts.pro_bar(ts_code=ts_code, adj=adj)
+        root_dir = os.path.join(root_dir, "day")
+    elif freq == 'W':
+        root_dir = os.path.join(root_dir, "week")
     else:
-        data = ts.pro_bar(ts_code=ts_code, adj=adj, freq=freq)
+        root_dir = os.path.join(root_dir, "month")
     
-    data = data.sort_values(by="trade_date").reset_index(drop=True)
+    root_dir = os.path.join(root_dir, "{}.csv".format(ts_code))
     
-    # 计算 macd
-    ema_short = get_EMA(data, short_)
-    ema_long = get_EMA(data, long_)
-    data['diff'] = pd.Series(ema_short) - pd.Series(ema_long)
-    
-    for i in range(len(data)):
-        if i == 0:
-            data.loc[i, 'dea'] = data.loc[i,'diff']        
-        else:
-            data.loc[i, 'dea'] = (2*data.loc[i,'diff'] + (m-1)*data.loc[i-1,'dea'])/(m+1)  
-            
-    data["macd"] = 2 * (data['diff'] - data['dea'])
-    
-    # 计算 ema7 和 ema14
-    data["ema7"] = get_EMA(data, ema_short_)
-    data["ema14"] = get_EMA(data, ema_long_)
-    data = data.drop(['ema'], axis=1)
+    # 更新数据
+    if os.path.exists(root_dir):
+        data = pd.read_csv(root_dir)
         
-    return data
+        # 获取开始和结束时间
+        start_date = str(data.iloc[-1]["trade_date"]+1)
+        end_date = date_util.get_current_date()
+
+        if int(start_date) > int(end_date):
+            return
+        else:
+            update = True
+            
+            data_tmp = pro.daily(ts_code=ts_code, start_date=start_date, end_date=end_date)
+            
+            # 在 data_tmp中构造data中所有的列，以便和data合并
+            for column in data.columns:
+                if column not in data_tmp.columns:
+                    data_tmp[column] = data_tmp["change"]
+            
+            # 将data的最后一行数据插入到data_tmp中，以便计算macd,dif,eda
+            data_last = pd.DataFrame(np.array(data.iloc[-1]).reshape(1,-1), columns=data_tmp.columns)
+            data_tmp = pd.concat([data_last, data_tmp], ignore_index=True)
+            
+            # 计算结果并和data合并
+            data_tmp = cal_macd(data_tmp, short_, long_, m, update)
+            data = pd.concat([data, data_tmp.drop(0)], ignore_index=True)
+    
+    # 初始化数据
+    else:
+        
+        # 获取数据
+        if freq is None:
+            data = ts.pro_bar(ts_code=ts_code, adj=adj)
+        else:
+            data = ts.pro_bar(ts_code=ts_code, adj=adj, freq=freq)
+
+        data = data.sort_values(by="trade_date").reset_index(drop=True)
+
+        update = False
+
+        # 计算 macd
+        data = cal_macd(data, short_, long_, m, update)
+    
+    # 保存数据
+    data.to_csv((root_dir), index=False)
+            
