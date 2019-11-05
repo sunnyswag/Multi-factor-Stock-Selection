@@ -9,7 +9,11 @@ import date_util
 
 pro = token_util.set_token()
 
-def get_stock_list(trade_date, delta_price=30.0):
+def get_stock_list(trade_date=None, delta_price=30.0):
+    
+    if trade_date is None:
+        trade_date = date_util.get_current_date()
+    
     stock_list = pro.stock_basic(exchange='', list_status='L', fields='ts_code,name,market,list_date')
     
     stock_list1 = stock_list[~stock_list['market'].isin(["创业板", "科创板"])].reset_index(drop=True)
@@ -39,6 +43,9 @@ def get_stock_list(trade_date, delta_price=30.0):
     stock_list.to_csv("../simulate_stock/data/data_{}.csv".format(trade_date), index=False)
     
     return stock_list
+
+def update_stock_daily():
+    pass
 
 def get_EMA(data, N):    
     for i in range(len(data)):        
@@ -91,17 +98,5 @@ def cal_macd(ts_code, freq=None, short_=12, long_=26, m=9, ema_short_=7, ema_lon
     data["ema7"] = get_EMA(data, ema_short_)
     data["ema14"] = get_EMA(data, ema_long_)
     data = data.drop(['ema'], axis=1)
-    
-#     if multi_output:
-        
-#         data_macd = data["macd"]
-#         macd = data_macd.iloc[-1]
-#         his_macd_discount = len(data_macd[data_macd > 0]) / len(data_macd)
-
-#         macd_trend = True if data_macd.iloc[-1] > data_macd.iloc[-2] else False
-
-#         return macd, data_macd, his_macd_discount, macd_trend
-    
-#     else:
         
     return data
