@@ -1,5 +1,6 @@
 import tushare as ts
 import numpy as np
+import pandas as pd
 
 import sys
 sys.path.append("../utils/")
@@ -38,3 +39,69 @@ def get_stock_list(trade_date, delta_price=30.0):
     stock_list.to_csv("../simulate_stock/data/data_{}.csv".format(trade_date), index=False)
     
     return stock_list
+
+def get_EMA(data, N):    
+    for i in range(len(data)):        
+        if i == 0:            
+            data.loc[i,'ema'] = data.loc[i,'close']        
+        if i > 0:            
+            data.loc[i,'ema'] = (2*data.loc[i,'close']+(N-1)*data.loc[i-1,'ema'])/(N+1)
+            
+    return list(data['ema'])
+
+def cal_macd(ts_code, freq=None, short_=12, long_=26, m=9, ema_short_=7, ema_long_=14, adj='qfq'):
+    
+    '''    
+    计算公式：
+    3个参数（这3个参数可以根据实际情况自己设定，默认为12，26和9）：
+    （12）日快速移动平均线，（26）日慢速移动平均，（9）日移动平均
+    
+    今日EMA（12）= 前一日EMA（12）×11/13＋今日收盘价×2/13
+    今日EMA（26）= 前一日EMA（26）×25/27＋今日收盘价×2/27
+    今日DIF = 今日EMA（12）- 今日EMA（26）
+    DEA（MACD）= 前一日DEA×8/10＋今日DIF×2/10
+    BAR = 2×(DIFF－DEA)
+    
+    data是包含高开低收成交量的标准dataframe
+    short_,long_,m分别是macd的三个参数    
+    返回值是包含原始数据和diff,dea,macd三个列的dataframe
+    '''
+    
+    if freq is None:
+        data = ts.pro_bar(ts_code=ts_code, adj=adj)
+    else:
+        data = ts.pro_bar(ts_code=ts_code, adj=adj, freq=freq)
+    
+    data = data.sort_values(by="trade_date").reset_index(drop=True)
+    
+    # 计算 macd
+    ema_short = get_EMA(data, short_)
+    ema_long = get_EMA(data, long_)
+    data['diff'] = pd.Series(ema_short) - pd.Series(ema_long)
+    
+    for i in range(len(data)):
+        if i == 0:
+            data.loc[i, 'dea'] = data.loc[i,'diff']        
+        else:
+            data.loc[i, 'dea'] = (2*data.loc[i,'diff'] + (m-1)*data.loc[i-1,'dea'])/(m+1)  
+            
+    data["macd"] = 2 * (data['diff'] - data['dea'])
+    
+    # 计算 ema7 和 ema14
+    data["ema7"] = get_EMA(data, ema_short_)
+    data["ema14"] = get_EMA(data, ema_long_)
+    data = data.drop(['ema'], axis=1)
+    
+#     if multi_output:
+        
+#         data_macd = data["macd"]
+#         macd = data_macd.iloc[-1]
+#         his_macd_discount = len(data_macd[data_macd > 0]) / len(data_macd)
+
+#         macd_trend = True if data_macd.iloc[-1] > data_macd.iloc[-2] else False
+
+#         return macd, data_macd, his_macd_discount, macd_trend
+    
+#     else:
+        
+    return data
