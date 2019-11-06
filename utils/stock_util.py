@@ -57,7 +57,7 @@ def get_EMA(data, N, update):
             
     return list(data['ema{}'.format(N)])
 
-def cal_macd(data, short_, long_, m, update):
+def cal_macd(data, update, short_=12, long_=26, m=9):
     
     ema_short = get_EMA(data, short_, update)
     ema_long = get_EMA(data, long_, update)
@@ -75,7 +75,7 @@ def cal_macd(data, short_, long_, m, update):
     
     return data
 
-def pull_data(ts_code, root_dir, freq=None, short_=12, long_=26, m=9, adj='qfq'):
+def pull_data(ts_code, root_dir, freq=None, adj='qfq'):
     
     '''    
     计算公式：
@@ -127,7 +127,7 @@ def pull_data(ts_code, root_dir, freq=None, short_=12, long_=26, m=9, adj='qfq')
             data_tmp = pd.concat([data_last, data_tmp], ignore_index=True)
             
             # 计算结果并和data合并
-            data_tmp = cal_macd(data_tmp, short_, long_, m, update)
+            data_tmp = cal_macd(data_tmp, update)
             data = pd.concat([data, data_tmp.drop(0)], ignore_index=True)
     
     # 初始化数据
@@ -144,7 +144,7 @@ def pull_data(ts_code, root_dir, freq=None, short_=12, long_=26, m=9, adj='qfq')
         update = False
 
         # 计算 macd
-        data = cal_macd(data, short_, long_, m, update)
+        data = cal_macd(data, update)
     
     # 保存数据
     data.to_csv((root_dir), index=False)

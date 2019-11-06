@@ -12,9 +12,9 @@ def get_condidate_stock(trade_date=None):
     
     stock_list = pd.read_csv("../data_pulled/stock_list.csv")
     
-    columns = ["stock_code", "name", "pct_chg_short", "his_macd_discount", "vol_mean_20", "vol_discount_mean"]
+    columns = ["index", "stock_code", "name", "pct_chg_short", "his_macd_discount", "vol_mean_20", "vol_discount_mean"]
     raw_choose_list = pd.DataFrame(columns = columns)
-
+    
     ROOT_PATH = os.path.join("..", "data_pulled")
     ROOT_PATH = os.path.join(ROOT_PATH, "day")
     stock_csv_list = os.listdir(ROOT_PATH)
@@ -62,7 +62,7 @@ def get_condidate_stock(trade_date=None):
                 if cur_dif - cur_dea > 0.001:
                     # 判断 dif 和 dea 是否大于0，且小于正dif/dea的平均值
                     if 0 < cur_dif < pos_dif_mean and 0 < cur_dea < pos_dea_mean:
-                        list_tmp = pd.DataFrame([[stock_code, name, ptc_chg_short, his_macd_discount,
+                        list_tmp = pd.DataFrame([[cur_index, stock_code, name, ptc_chg_short, his_macd_discount,
                                                   vol_mean_20, vol_discount_mean]], columns=columns)
                         raw_choose_list = raw_choose_list.append(list_tmp)
                     
@@ -74,18 +74,19 @@ def get_condidate_stock(trade_date=None):
         c_data = choose_list[column]
         choose_list[column] = (c_data-c_data.mean()) / c_data.std()
 
-    # 排序
+    if len(choose_list) != 0:
+        # 排序
 
-    def get_rank_factor(arr):
-        pct_chg_short = arr["pct_chg_short"] * 0.2
-        his_macd_discount = arr["his_macd_discount"] * 0.1
-        vol_mean_20 = arr["vol_mean_20"] * 0.25
-        vol_discount_mean = arr["vol_discount_mean"] * 0.25
-        return pct_chg_short+his_macd_discount+vol_mean_20+vol_discount_mean
+        def get_rank_factor(arr):
+            pct_chg_short = arr["pct_chg_short"] * 0.2
+            his_macd_discount = arr["his_macd_discount"] * 0.1
+            vol_mean_20 = arr["vol_mean_20"] * 0.25
+            vol_discount_mean = arr["vol_discount_mean"] * 0.25
+            return pct_chg_short+his_macd_discount+vol_mean_20+vol_discount_mean
+        
+        choose_list["rank_factor"] = choose_list.apply(get_rank_factor, axis = 1)
+        choose_list = choose_list.sort_values(by="rank_factor", ascending= False).reset_index(drop=True)
 
-    choose_list["rank_factor"] = choose_list.apply(get_rank_factor, axis = 1)
-    choose_list = choose_list.sort_values(by="rank_factor", ascending= False).reset_index(drop=True)
-    
     return choose_list
 
 def negetive_macd_judge(data_macd):
