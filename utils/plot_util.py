@@ -45,7 +45,7 @@ def plot_enter(golden_port, true_port=5, plot_date=False):
             if plot_date:
                 plt.title(str(golden_port['date'][num_plot-1]) + " " + current_enter)
             else:
-                plt.title(current_enter)
+                plt.title(str(num_plot-1) + "   " + current_enter)
             plt.plot(golden_port["data"][num_plot-1].iloc[:,0].values)
             plt.plot(golden_port["data"][num_plot-1].iloc[:,1].values)
             plt.axis("off")

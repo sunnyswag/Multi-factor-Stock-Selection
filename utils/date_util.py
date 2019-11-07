@@ -1,5 +1,7 @@
 from datetime import datetime
 from datetime import timedelta
+import pandas as pd
+import chinese_calendar
 
 def add_zero(date):
     
@@ -89,6 +91,30 @@ def get_next_n_day(date=None, n_day=5):
     next_date = date + timedelta(days=n)
     
     return tramsform_datetime_to_str(date)
+
+# def get_work_day_range(start_date, end_date):
+    
+#     date_list = pd.date_range(start_date, end_date).to_pydatetime()
+    
+#     work_date_list = []
+    
+#     for date in date_list:
+#         if chinese_calendar.is_workday(date):
+#             date = date_util.tramsform_datetime_to_str(date)
+#             work_date_list.append(date)
+            
+#     return work_date_list
+
+def get_work_day_range(start_date, end_date):
+    data_tmp = pd.read_csv("../data_pulled/day/000001.SZ.csv")
+    
+    star_port = data_tmp["trade_date"]>=int(start_date)
+    end_port = data_tmp["trade_date"]<int(end_date)
+    date_list = data_tmp[star_port & end_port].index.to_list()
+    
+    work_date_list = data_tmp["trade_date"][date_list].to_list()
+    
+    return [str(date) for date in work_date_list]
 
 def tramsform_datetime_to_str(date):
     

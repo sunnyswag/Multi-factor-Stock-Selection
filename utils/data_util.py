@@ -1,6 +1,7 @@
 import tushare as ts
 import numpy as np
 import pandas as pd
+import time
 import os
 
 import sys
@@ -10,7 +11,7 @@ import date_util
 
 pro = token_util.set_token()
 
-def get_stock_list(trade_date=None, delta_price=30.0):
+def get_stock_list(trade_date=None, delta_price=None):
     
     if trade_date is None:
         trade_date = date_util.get_current_date()
@@ -25,7 +26,7 @@ def get_stock_list(trade_date=None, delta_price=30.0):
     stock_list = stock_list2.drop(['market', 'list_date'], axis=1)
     stock_list['price'] = np.zeros(len(stock_list))
     
-    # 剔除 date_time 时刻价格高于30的股票
+    # 剔除 date_time 时刻价格高于delta_price的股票
     
     for i in range(len(stock_list)):
         stock_code = stock_list.iloc[i]["ts_code"]
@@ -35,13 +36,15 @@ def get_stock_list(trade_date=None, delta_price=30.0):
             if current_df.empty:
                 continue
             stock_list.loc[i, "price"] = (current_df.loc[0, "close"] + current_df.loc[0, "pre_close"]) / 2
-        except:
-            time.sleep(5)
             
-    stock_list = stock_list[stock_list["price"] <= delta_price]
+        except:
+            time.sleep(3)
+            
+    if delta_price is not None:
+        stock_list = stock_list[stock_list["price"] <= delta_price]
     
     stock_list = stock_list.reset_index(drop=True)
-    stock_list.to_csv("../simulate_stock/data/data_{}.csv".format(trade_date), index=False)
+    stock_list.to_csv("./data_pulled/stock_date_{}_delta_price{}.csv".format(trade_date, delta_price), index=False)
     
     return stock_list
 
@@ -94,6 +97,7 @@ def pull_data(ts_code, root_dir, freq=None, adj='qfq'):
     '''
     
     if freq is None:
+        freq = "D"
         root_dir = os.path.join(root_dir, "day")
     elif freq == 'W':
         root_dir = os.path.join(root_dir, "week")
@@ -115,7 +119,11 @@ def pull_data(ts_code, root_dir, freq=None, adj='qfq'):
         else:
             update = True
             
-            data_tmp = pro.daily(ts_code=ts_code, start_date=start_date, end_date=end_date)
+            data_tmp = ts.pro_bar(ts_code=ts_code, adj=adj, start_date=start_date, end_date=end_date, freq=freq)
+            data_tmp = data_tmp.sort_values(by="trade_date").reset_index(drop=True)
+            # 针对周k不需要更新的情况
+            if len(data_tmp) == 0:
+                return
             
             # 在 data_tmp中构造data中所有的列，以便和data合并
             for column in data.columns:
@@ -147,5 +155,4 @@ def pull_data(ts_code, root_dir, freq=None, adj='qfq'):
         data = cal_macd(data, update)
     
     # 保存数据
-    data.to_csv((root_dir), index=False)
-            
+    data.to_csv(root_dir, index=False)
