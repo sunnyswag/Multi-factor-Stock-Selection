@@ -12,17 +12,25 @@
 
 # 进场:
 # 周k 判断
-if macd > macd_before or dif 和 dea 都在增加:
+if macd > macd_before and  dif 和 dea 都在增加:
     加入待选池
 
 # 日k判断
 if MACD刚开始大于0 and 未过度上涨:
     if 今天的 dif 比 dea大
-        if 0 < dif  and 0 < dea ：
-            # 财报判断
-            if 上个季度财报营业收入高于这个季度 两个季度中利润都为正值:
-                加入日k待选池
-                加入进场池
+        if 0 < dif  and 0 < dea :
+            condiction = True
+            
+if 今天，昨天，前天的macd都大于0:
+    if 前天macd > 昨天macd and 今天macd > 昨天macd:
+        if 今天dif和dea的差值大于昨天的:
+            condition = True
+        
+if condition = True:
+    # 财报判断
+    if 上个季度财报营业收入高于这个季度 两个季度中利润都为正值:
+        加入日k待选池
+        加入进场池
      
 对股票排序()
 
