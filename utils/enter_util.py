@@ -3,21 +3,10 @@ import date_util
 import tushare as ts
 import pandas as pd
 import numpy as np
+import time
 import os
 
-# def golden_port(cur_detail, cur_index):
-#     data = cur_detail.iloc[cur_index-35:cur_index+1]
-#     last_m12, last_m26 = data.iloc[0]['ema12'], data.iloc[0]['ema26']
-    
-#     golden_p = False
-    
-#     for i in range(len(data)):
-#         this_m12, this_m26 = data.iloc[i]['ema12'], data.iloc[i]['ema26']
-#         if (last_m12 < last_m26 and this_m12 > this_m26) or (last_m12 - last_m26 < 0.015 and this_m12 - this_m26 > 0) :
-#             golden_p = True
-#             break
-    
-#     return golden_p
+pro = token_util.set_token()
 
 def get_weekk_condidate_stock(trade_date=None, stock_list_dir=None):
     
@@ -64,16 +53,13 @@ def get_weekk_condidate_stock(trade_date=None, stock_list_dir=None):
             last_dif = cur_detail.iloc[cur_index-1]["diff"]
             last_dea = cur_detail.iloc[cur_index-1]["dea"]
             
-            dif_mean = abs(cur_detail["diff"][:cur_index]).sum() / (cur_index + 1)
-            dea_mean = abs(cur_detail["dea"][:cur_index]).sum() / (cur_index + 1)
+            dif_dea_mean = (abs(cur_dif - cur_dea) + abs(last_dif - last_dea)) / 2
             
-            dif_dea_mean = (dif_mean + dea_mean) / 2
-            cur_dif_dea = abs(cur_dif - cur_dea) / dif_dea_mean
+            if cur_macd - last_macd > -0.001 or ( cur_dif - last_dif > -0.001 and cur_dea - last_dea > -0.001):
             
-            if cur_macd - last_macd > 0.01 or (last_dif < cur_dif and last_dea < cur_dea):
                 raw_choose["name"].append(name)
                 raw_choose["stock_code"].append(stock_code)
-                raw_choose["dif_dea"].append(cur_dif_dea)
+                raw_choose["dif_dea"].append(dif_dea_mean)
                 
     return trade_date, raw_choose
 
@@ -86,7 +72,7 @@ def get_condidate_stock(trade_date=None, raw_choose=None, use_re_max_min=False):
     if type(raw_choose) is not dict:
         return "pelase define the right raw_choose(dict), raw_choose = {\"name\":[], \"stock_code\":[]}"
     
-    columns = ["index", "stock_code", "trade_date", "name", "dif_dea", "his_macd_discount", "vol_mean_20", "vol_discount_mean"]
+    columns = ["index", "stock_code", "trade_date", "name", "dif_dea", "revenue_mean", "vol_mean_20", "vol_discount_mean"]
     raw_choose_list = pd.DataFrame(columns = columns)
     
     ROOT_PATH = os.path.join("..", "data_pulled")
@@ -114,15 +100,9 @@ def get_condidate_stock(trade_date=None, raw_choose=None, use_re_max_min=False):
             
             cur_macd = cur_detail.iloc[cur_index]["macd"]
             last_macd =  cur_detail.iloc[cur_index-1]["macd"]
+            
             cur_dif = cur_detail.iloc[cur_index]["diff"]
             cur_dea = cur_detail.iloc[cur_index]["dea"]
-#             pos_dif_mean = cur_detail["diff"][cur_detail["diff"] > 0].mean()
-#             pos_dea_mean = cur_detail["dea"][cur_detail["dea"] > 0].mean()
-
-            # 历史数据(macd>0)天数 / 总的天数
-            his_macd = cur_detail["macd"][:cur_index+1]
-            macd_positive = (his_macd > 0).sum()
-            his_macd_discount = macd_positive / len(his_macd)
 
             # 近半个月成交额均值 / 近一个月成交额均值
             vol_mean_10 = cur_detail["vol"][cur_index - 10:cur_index].mean()
@@ -133,29 +113,51 @@ def get_condidate_stock(trade_date=None, raw_choose=None, use_re_max_min=False):
             dif_dea = raw_choose["dif_dea"][i]
             
             # 上涨过度
-            over_rise = cur_detail["pct_chg"][cur_index] < 6.0 and cur_detail["pct_chg"][cur_index-1] < 6.0
+            over_rise = cur_detail["pct_chg"][cur_index] < 9.0 and cur_detail["pct_chg"][cur_index-1] < 9.0
             
             if (cur_macd > -0.001 and last_macd < 0) and  over_rise :
                 # 判断今天的 dif 是否比 dea大
-                if cur_dif - cur_dea > 0.001:
-                    # 判断 dif 和 dea 是否大于0，且小于正dif/dea的平均值
+                if cur_dif - cur_dea > -0.001:
+                    # 判断 dif 和 dea 是否大于0
                     if 0 < cur_dif and 0 < cur_dea :
-                        list_tmp = pd.DataFrame([[cur_index, stock_code, trade_date, name, dif_dea, his_macd_discount,
-                                                  vol_mean_20, vol_discount_mean]], columns=columns)
-                        raw_choose_list = raw_choose_list.append(list_tmp)
+                        
+                        try:
+                            # 使用利润表做判断
+                            start_date = trade_date[0:3] + str(int(trade_date[3]) - 1) + trade_date[4:]
+                            profit_table = pro.income(ts_code=stock_code, start_date=start_date, end_date=trade_date, 
+                                    fields='ts_code,f_ann_date,revenue,n_income_attr_p')
+                            profit_table = profit_table.drop_duplicates().reset_index(drop=True)[:2]
+                            
+                            cur_income_attr = profit_table["n_income_attr_p"][0]
+                            last_income_attr = profit_table["n_income_attr_p"][1]
+                            cur_revenue = profit_table["revenue"][0]
+                            last_revenue = profit_table["revenue"][1]
+                            revenue_mean_tmp = (cur_revenue + last_revenue) / 2
+                            
+                            profit_con = cur_income_attr > 0 and last_income_attr > 0 and cur_revenue > last_revenue
+                            revenue_mean = (cur_revenue - last_revenue) / revenue_mean_tmp
+                            
+                        except:
+                            time.sleep(3)
+                            
+                        if profit_con:
+                        
+                            list_tmp = pd.DataFrame([[cur_index, stock_code, trade_date, name, dif_dea, revenue_mean,
+                                                      vol_mean_20, vol_discount_mean]], columns=columns)
+                            raw_choose_list = raw_choose_list.append(list_tmp)
     
     choose_list = raw_choose_list.reset_index(drop=True)
     
     if len(choose_list) != 0:
         
         # 去除vol最大最小值
-        if use_re_max_min:
-            if len(choose_list) > 3 :
-                max_index = choose_list["vol_mean_20"].idxmax()
-                choose_list = choose_list.drop([max_index], axis=0).reset_index(drop=True)
-            if len(choose_list) > 6 :
-                min_index = choose_list["vol_mean_20"].idxmin()
-                choose_list = choose_list.drop([min_index], axis=0).reset_index(drop=True)
+#         if use_re_max_min:
+#             if len(choose_list) > 3 :
+#                 max_index = choose_list["vol_mean_20"].idxmax()
+#                 choose_list = choose_list.drop([max_index], axis=0).reset_index(drop=True)
+#             if len(choose_list) > 6 :
+#                 min_index = choose_list["vol_mean_20"].idxmin()
+#                 choose_list = choose_list.drop([min_index], axis=0).reset_index(drop=True)
         
         # 数据归一化
         if len(choose_list) != 1:
@@ -167,11 +169,11 @@ def get_condidate_stock(trade_date=None, raw_choose=None, use_re_max_min=False):
         # 排序
         
         def get_rank_factor(arr):
-            dif_dea = arr["dif_dea"] * 0.4
-            his_macd_discount = arr["his_macd_discount"] * 0.1
-            vol_mean_20 = arr["vol_mean_20"] * 0.25
-            vol_discount_mean = arr["vol_discount_mean"] * 0.25
-            return dif_dea+his_macd_discount+vol_mean_20+vol_discount_mean
+            dif_dea = arr["dif_dea"] * 0.3
+            revenue_mean = arr["revenue_mean"] * 0.15
+            vol_mean_20 = arr["vol_mean_20"] * 0.2
+            vol_discount_mean = arr["vol_discount_mean"] * 0.2
+            return dif_dea+revenue_mean+vol_mean_20+vol_discount_mean
         
         choose_list["rank_factor"] = choose_list.apply(get_rank_factor, axis = 1)
         choose_list = choose_list.sort_values(by="rank_factor", ascending= False).reset_index(drop=True)
