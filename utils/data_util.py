@@ -11,40 +11,48 @@ import date_util
 
 pro = token_util.set_token()
 
-def get_stock_list(trade_date=None, delta_price=None):
+def get_stock_list(month_before=12, delta_price=None):
     
-    if trade_date is None:
-        trade_date = date_util.get_current_date()
+    """
+    month_before : 获取n个月之前所有上市公司的股票列表，
+                    默认为获取一年前上市公司股票列表
+    delta_price ：用于剔除掉金额大于delta_price的股票，若为空则不剔除
+    
+    
+    TIPS : delta_price 和今天的股价进行比较 
+    """
+    trade_date = date_util.get_current_date()
     
     stock_list = pro.stock_basic(exchange='', list_status='L', fields='ts_code,name,market,list_date')
     
     stock_list1 = stock_list[~stock_list['market'].isin(["创业板", "科创板"])].reset_index(drop=True)
 
-    delta_date = date_util.get_date_months_before(6)
+    delta_date = date_util.get_date_months_before(month_before)
     stock_list2 = stock_list1[stock_list1["list_date"] <= delta_date].reset_index(drop=True)
 
     stock_list = stock_list2.drop(['market', 'list_date'], axis=1)
-    stock_list['price'] = np.zeros(len(stock_list))
     
     # 剔除 date_time 时刻价格高于delta_price的股票
-    
-    for i in range(len(stock_list)):
-        stock_code = stock_list.iloc[i]["ts_code"]
-        try:
-            current_df = ts.pro_bar(ts_code=stock_code, adj='qfq',
-                                    start_date=trade_date, end_date=trade_date)
-            if current_df.empty:
-                continue
-            stock_list.loc[i, "price"] = (current_df.loc[0, "close"] + current_df.loc[0, "pre_close"]) / 2
-            
-        except:
-            time.sleep(3)
-            
     if delta_price is not None:
+        
+        stock_list['price'] = np.zeros(len(stock_list))
+        
+        for i in range(len(stock_list)):
+            stock_code = stock_list.iloc[i]["ts_code"]
+            try:
+                current_df = ts.pro_bar(ts_code=stock_code, adj='qfq',
+                                        start_date=trade_date, end_date=trade_date)
+                if current_df.empty:
+                    continue
+                stock_list.loc[i, "price"] = (current_df.loc[0, "close"] + current_df.loc[0, "pre_close"]) / 2
+
+            except:
+                time.sleep(3)
+            
         stock_list = stock_list[stock_list["price"] <= delta_price]
     
     stock_list = stock_list.reset_index(drop=True)
-    stock_list.to_csv("./data_pulled/stock_date_{}_delta_price{}.csv".format(trade_date, delta_price), index=False)
+    stock_list.to_csv("./data_pulled/stock_date_{}_delta_price{}.csv".format(delta_date, delta_price), index=False)
     
     return stock_list
 

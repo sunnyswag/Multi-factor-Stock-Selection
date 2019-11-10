@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 def plot_enter(golden_port, true_port=5, plot_date=False):
     
     """
-    golden_port = {"index":[], date":[], "data":[]}
-    "index" : (just overlook it)
+    golden_port = {"test_index":[], date":[], "data":[]}
+    "test_index" : get data index when you do test
     "data" : the date of entry.
     "data" : the fast_line and slow_line data after entry of a short period.
     
@@ -45,7 +45,7 @@ def plot_enter(golden_port, true_port=5, plot_date=False):
             if plot_date:
                 plt.title(str(golden_port['date'][num_plot-1]) + " " + current_enter)
             else:
-                plt.title(str(num_plot-1) + "   " + current_enter)
+                plt.title(str(golden_port["test_index"][num_plot-1]) + "   " + current_enter)
             plt.plot(golden_port["data"][num_plot-1].iloc[:,0].values)
             plt.plot(golden_port["data"][num_plot-1].iloc[:,1].values)
             plt.axis("off")

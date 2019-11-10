@@ -5,8 +5,9 @@
 
 1. n-grid法则
 
+2. 周k符合入场条件，持续观察
 
-2. 
+3.  
 ```python
 
 
@@ -15,16 +16,17 @@
 if macd > macd_before and  dif 和 dea 都在增加:
     加入待选池
 
-# 日k判断
+# 日k 判断
 if MACD刚开始大于0 and 未过度上涨:
     if 今天的 dif 比 dea大
         if 0 < dif  and 0 < dea :
             condiction = True
             
-if 今天，昨天，前天的macd都大于0:
+if 今天，昨天，前天的macd都大于0 and 未过度上涨:
     if 前天macd > 昨天macd and 今天macd > 昨天macd:
-        if 今天dif和dea的差值大于昨天的:
-            condition = True
+        if 今天dea的值大于昨天的 and 昨天大于前天的 and  昨天dea > 0:
+            if 昨天macd > 昨天dea :
+                condition = True
         
 if condition = True:
     # 财报判断
@@ -47,9 +49,15 @@ def 对股票排序():
 
 
 def 进场():
-    1. 周k dif和dea曲线无明显趋势不进场 and 周k macd 呈下降趋势不买
-    2. dif和dea较大(和macd相比)且几乎相等的不进场
+    选择vol高的,去除vol大于4的
+    本周最后一个交易日不进场
 
+def 出场():
+    前五天不管，五天后再看，
+        若五天内涨幅不超过5%，则卖出
+        若五天内表现不稳定，则卖出
+    根据成交额来决定是否卖出，若涨幅超过10%，且明天涨幅不超过0.5%，则在后天优卖出
+    
 # 出场:
     
     # 方案：使用，前1，前0天平均值进行测试
