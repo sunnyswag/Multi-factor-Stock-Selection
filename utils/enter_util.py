@@ -8,7 +8,7 @@ import os
 
 pro = token_util.set_token()
 
-def get_weekk_condidate_stock(trade_date=None, stock_list_dir=None):
+def get_weekk_condidate_stock(trade_date=None, stock_list_dir=None, stock_list_root=None):
     
     if trade_date is None:
         trade_date = date_util.get_current_date()
@@ -18,7 +18,10 @@ def get_weekk_condidate_stock(trade_date=None, stock_list_dir=None):
     if stock_list_dir is None:
         stock_list_dir = "../data_pulled/stock_date_2018119_delta_priceNone.csv"
     
-    stock_list = pd.read_csv(stock_list_dir)
+    if stock_list_root is not None:
+        stock_list = stock_list_root
+    else:
+        stock_list = pd.read_csv(stock_list_dir)
     
     raw_choose = {"name":[], "stock_code":[], "dif_dea":[]}
     
@@ -30,9 +33,14 @@ def get_weekk_condidate_stock(trade_date=None, stock_list_dir=None):
     num = 1 if stock_csv_list[0] == '.ipynb_checkpoints' else 0
     
     for i in range(len(stock_list)):
-
-        stock_code = stock_list.iloc[i]["ts_code"]
-        name = stock_list.iloc[i]["name"]
+        
+        if stock_list_root is not None:
+            stock_code = stock_list[i]
+        else:
+            stock_code = stock_list.iloc[i]["ts_code"]
+            
+        name = None
+#         name = stock_list.iloc[i]["name"]
         
         if stock_code + '.csv' in stock_csv_list:
             stock_csv_list_index = stock_csv_list.index(stock_code + '.csv')
@@ -45,130 +53,31 @@ def get_weekk_condidate_stock(trade_date=None, stock_list_dir=None):
             else:
                 cur_index = cur_index[-1]
             
-            cur_macd = cur_detail.iloc[cur_index]["macd"]
-            last_macd = cur_detail.iloc[cur_index-1]["macd"]
+#             cur_macd = cur_detail.iloc[cur_index]["macd"]
+#             last_macd = cur_detail.iloc[cur_index-1]["macd"]
             
             cur_dif = cur_detail.iloc[cur_index]["diff"]
             cur_dea = cur_detail.iloc[cur_index]["dea"]
             last_dif = cur_detail.iloc[cur_index-1]["diff"]
             last_dea = cur_detail.iloc[cur_index-1]["dea"]
+            
+            cur_ema12 = cur_detail.iloc[cur_index]["ema12"]
+            cur_ema26 = cur_detail.iloc[cur_index]["ema26"]
+            
+#             month_ema12 = cur_detail.iloc[cur_index-3]["ema12"]
+#             month_ema26 = cur_detail.iloc[cur_index-3]["ema26"]
             
             dif_dea_mean = (abs(cur_dif - cur_dea) + abs(last_dif - last_dea)) / 2
             
-            if cur_macd > 0 and last_macd > 0:
-                if cur_dea > 0 and cur_dif > 0:
+#             if cur_macd > 0 and last_macd > 0:
+#                 if cur_dea > 0 and cur_dif > 0:
+#                     if cur_ema12-cur_ema26 > month_ema12-month_ema26 :
             
-                    raw_choose["name"].append(name)
-                    raw_choose["stock_code"].append(stock_code)
-                    raw_choose["dif_dea"].append(dif_dea_mean)
-                
+            raw_choose["name"].append(name)
+            raw_choose["stock_code"].append(stock_code)
+            raw_choose["dif_dea"].append(dif_dea_mean)
+
     return trade_date, raw_choose
-
-def get_week_start_true(trade_date=None, stock_list_dir=None):
-    if trade_date is None:
-        trade_date = date_util.get_current_date()
-    elif len(trade_date) != 8:
-        return "please check the date format. for example, \'20191010\'"
-    
-    if stock_list_dir is None:
-        stock_list_dir = "../data_pulled/stock_date_2018119_delta_priceNone.csv"
-    
-    stock_list = pd.read_csv(stock_list_dir)
-    
-    columns = ["index", "stock_code", "trade_date", "name"]
-    raw_choose_list = pd.DataFrame(columns = columns)
-    
-    ROOT_PATH = os.path.join("..", "data_pulled")
-    WEEK_ROOT_PATH = os.path.join(ROOT_PATH, "week")
-    MONTH_ROOT_PATH = os.path.join(ROOT_PATH, "month")
-    
-    week_stock_csv_list = os.listdir(WEEK_ROOT_PATH)
-    month_stock_csv_list = os.listdir(MONTH_ROOT_PATH)
-    
-    # 若第一个文件为 '.ipynb_checkpoints'
-    num = 1 if week_stock_csv_list[0] == '.ipynb_checkpoints' else 0
-    
-    for i in range(len(stock_list)):
-
-        stock_code = stock_list.iloc[i]["ts_code"]
-        name = stock_list.iloc[i]["name"]
-        
-        if stock_code + '.csv' in week_stock_csv_list:
-            week_stock_csv_list_index = week_stock_csv_list.index(stock_code + '.csv')
-            cur_detail = pd.read_csv(os.path.join(WEEK_ROOT_PATH, week_stock_csv_list[week_stock_csv_list_index]))
-            cur_index = cur_detail[cur_detail["trade_date"] <= int(trade_date)].index.tolist()
-
-            # 若此股票此时还未上市，则跳过
-            if cur_index == []:
-                continue
-            else:
-                cur_index = cur_index[-1]
-            
-            cur_macd = cur_detail.iloc[cur_index]["macd"]
-            last_macd = cur_detail.iloc[cur_index-1]["macd"]
-            llast_macd = cur_detail.iloc[cur_index-2]["macd"]
-            
-            cur_dif = cur_detail.iloc[cur_index]["diff"]
-            last_dif = cur_detail.iloc[cur_index-1]["diff"]
-            
-            cur_dea = cur_detail.iloc[cur_index]["dea"]
-            last_dea = cur_detail.iloc[cur_index-1]["dea"]
-            llast_dea = cur_detail.iloc[cur_index -2]["dea"]
-            
-            condition = False
-            
-            if cur_macd > -0.001 and last_macd < 0 :
-                if cur_dif - cur_dea > -0.001:
-                    if 0 < cur_dif and -0.006 < cur_dea :
-                        condition = True
-            
-#             if llast_macd > 0 and last_macd > 0 and cur_macd > 0 :
-#                 if llast_macd > last_macd and cur_macd > last_macd :
-#                     if cur_dea > last_dea and last_dea > llast_dea and last_dea > 0:
-#                         condition = True
-            
-            if condition:
-            
-#                 try:
-#                     # 使用利润表做判断
-#                     start_date = trade_date[0:3] + str(int(trade_date[3]) - 1) + trade_date[4:]
-#                     profit_table = pro.income(ts_code=stock_code, start_date=start_date, end_date=trade_date, 
-#                                     fields='ts_code,f_ann_date,revenue,n_income_attr_p')
-#                     profit_table = profit_table.drop_duplicates().reset_index(drop=True)[:2]
-                            
-#                     cur_income_attr = profit_table["n_income_attr_p"][0]
-#                     last_income_attr = profit_table["n_income_attr_p"][1]
-#                     cur_revenue = profit_table["revenue"][0]
-#                     last_revenue = profit_table["revenue"][1]
-#                     revenue_mean_tmp = (cur_revenue + last_revenue) / 2
-                            
-#                     profit_con = cur_income_attr > 0 and last_income_attr > 0 and cur_revenue > last_revenue
-#                     revenue_mean = (cur_revenue - last_revenue) / revenue_mean_tmp
-                            
-#                 except:
-#                     time.sleep(3)
-                            
-#                 if profit_con:
-                    
-#                     if stock_code + '.csv' in month_stock_csv_list:
-                    
-#                         month_data = pd.read_csv("../data_pulled/month/{}.csv".format(stock_code))
-#                         cur_index = month_data[month_data["trade_date"] <= int(trade_date)].index.tolist()[-1]
-
-#                         cur_macd = month_data.iloc[cur_index]["macd"]
-#                         last_macd = month_data.iloc[cur_index-1]["macd"]
-#                         llast_macd = month_data.iloc[cur_index-2]["macd"]
-                        
-#                         cur_dif = month_data.iloc[cur_index]["diff"]
-#                         cur_dea = month_data.iloc[cur_index]["dea"]
-
-#                         if cur_macd > 0 and cur_dif > 0 and cur_dea > 0:
-#                             if llast_macd < last_macd and last_macd < cur_macd:
-
-                    list_tmp = pd.DataFrame([[cur_index, stock_code, trade_date, name]], columns=columns)
-                    raw_choose_list = raw_choose_list.append(list_tmp)
-    
-    return raw_choose_list.reset_index(drop=True)
 
 def get_profit_con(ts_code, trade_date):
 #     try:
@@ -256,22 +165,20 @@ def get_condidate_stock(trade_date=None, raw_choose=None, use_re_max_min=False):
             dif_dea = raw_choose["dif_dea"][i]
             
             # 上涨过度
-            over_rise = cur_detail["pct_chg"][cur_index] < 9.0 and cur_detail["pct_chg"][cur_index-1] < 9.0
+            # over_rise = cur_detail["pct_chg"][cur_index] < 9.0 and cur_detail["pct_chg"][cur_index-1] < 9.0
             
             condition = False
             
             # macd 刚开始大于0
-            if (cur_macd > -0.001 and last_macd < 0) and over_rise :
+            if (cur_macd > -0.001 and last_macd < 0) :
                 # 判断今天的 dif 是否比 dea大
                 if cur_dif - cur_dea > -0.001 and 0 < cur_dif and -0.006 < cur_dea :
-                    # if (cur_dea - cur_macd) / price_mean < 0.05 :
                     condition = True
                         
-            if llast_macd > 0 and last_macd > 0 and cur_macd > 0 and over_rise:
+            if llast_macd > 0 and last_macd > 0 and cur_macd > 0 :
                 if llast_macd > last_macd and cur_macd > last_macd :
                     if cur_dea > last_dea and last_dea > llast_dea and last_dea > 0:
-                        # if last_dea - last_macd < 0.05: # 关键
-                            condition = True
+                        condition = True
             
             # amcd一直大于0，刚开始大于0
             if condition :

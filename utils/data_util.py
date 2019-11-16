@@ -9,6 +9,9 @@ sys.path.append("../utils/")
 import token_util
 import date_util
 
+from jqdatasdk import *
+auth('15211097884','097884')
+
 pro = token_util.set_token()
 
 def get_stock_list(month_before=12, delta_price=None):
@@ -164,3 +167,25 @@ def pull_data(ts_code, root_dir, freq=None, adj='qfq'):
     
     # 保存数据
     data.to_csv(root_dir, index=False)
+    
+def get_industry_concept(industry_list, concept_list):
+    
+    stock_list = []
+
+    for concept in concept_list:
+        stocks = get_concept_stocks(concept, date='2019-11-11')
+        for i in stocks:
+            if i[7:] == "XSHE" :
+                stock_list.append(i[:6] + ".SZ")
+            else:
+                stock_list.append(i[:6] + ".SH")
+
+    for industry in industry_list:
+        stocks = get_industry_stocks(industry, date='2019-11-11')
+        for i in stocks:
+            if i[7:] == "XSHE" :
+                stock_list.append(i[:6] + ".SZ")
+            else:
+                stock_list.append(i[:6] + ".SH")
+    
+    return stock_list
