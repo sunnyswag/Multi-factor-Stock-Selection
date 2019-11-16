@@ -53,7 +53,7 @@ def get_start_stock(trade_date=None, stock_list_dir=None):
         
     return stock_list_result
 
-def get_secure_stock(trade_date=None, stock_list_dir=None):
+def get_secure_stock(trade_date=None, stock_list_dir=None, month_num=2):
     
     stock_list_result = []
     
@@ -92,7 +92,6 @@ def get_secure_stock(trade_date=None, stock_list_dir=None):
             
             cur_macd = cur_detail.iloc[cur_index]["macd"]
             last_macd = cur_detail.iloc[cur_index-1]["macd"]
-            llast_macd = cur_detail.iloc[cur_index-2]["macd"]
             
             cur_dif = cur_detail.iloc[cur_index]["diff"]
             cur_dea = cur_detail.iloc[cur_index]["dea"]
@@ -100,11 +99,15 @@ def get_secure_stock(trade_date=None, stock_list_dir=None):
             last_dif = cur_detail.iloc[cur_index-1]["diff"]
             last_dea = cur_detail.iloc[cur_index-1]["dea"]
             
-            llast_dif = cur_detail.iloc[cur_index-2]["diff"]
-            llast_dea = cur_detail.iloc[cur_index-2]["dea"]
-            
-            macd_true = cur_macd > 0 and last_macd > 0 and llast_macd > 0
-            dea_dif_ture = cur_dif>0 and cur_dea>0 and last_dif>0 and last_dea>0 and llast_dif>0 and llast_dea>0
+            if month_num == 2 :
+                macd_true = cur_macd > 0 and last_macd > 0
+                dea_dif_ture = cur_dif>0 and cur_dea>0 and last_dif>0 and last_dea>0
+            elif month_num == 3 :
+                llast_macd = cur_detail.iloc[cur_index-2]["macd"]
+                llast_dif = cur_detail.iloc[cur_index-2]["diff"]
+                llast_dea = cur_detail.iloc[cur_index-2]["dea"]
+                macd_true = cur_macd > 0 and last_macd > 0 and llast_macd > 0
+                dea_dif_ture = cur_dif>0 and cur_dea>0 and last_dif>0 and last_dea>0 and llast_dif>0 and llast_dea>0
             
             if macd_true and dea_dif_ture and cur_macd > last_macd:
                 stock_list_result.append(stock_code)
