@@ -28,8 +28,23 @@ def get_stock_list(month_before=12, delta_price=None):
     
     stock_list = pro.stock_basic(exchange='', list_status='L', fields='ts_code,name,market,list_date')
     
+    # 去除创业板和科创板股票
     stock_list1 = stock_list[~stock_list['market'].isin(["创业板", "科创板"])].reset_index(drop=True)
-
+    
+    # 去除ST，银行和证券公司股票
+    index_list = []
+    for i in range(len(stock_list1)):
+        if '银行' in stock_list1.iloc[i]['name'] \
+            or 'ST' in stock_list1.iloc[i]['name'] \
+                or '证券' in stock_list1.iloc[i]['name'] :
+                    index_list.append(i)
+                
+    for i in index_list:
+        stock_list1 = stock_list1.drop(i)
+    
+    stock_list1 = stock_list1.reset_index(drop=True)
+    
+    # 去除一年内上市的股票(默认)
     delta_date = date_util.get_date_months_before(month_before)
     stock_list2 = stock_list1[stock_list1["list_date"] <= delta_date].reset_index(drop=True)
 
@@ -55,7 +70,7 @@ def get_stock_list(month_before=12, delta_price=None):
         stock_list = stock_list[stock_list["price"] <= delta_price]
     
     stock_list = stock_list.reset_index(drop=True)
-    stock_list.to_csv("./data_pulled/stock_date_{}_delta_price{}.csv".format(delta_date, delta_price), index=False)
+    stock_list.to_csv("./data_pulled/stock_date_delta_price{}.csv".format(delta_price), index=False)
     
     return stock_list
 
@@ -131,10 +146,12 @@ def pull_data(ts_code, root_dir, freq=None, adj='qfq'):
             update = True
             
             data_tmp = ts.pro_bar(ts_code=ts_code, adj=adj, start_date=start_date, end_date=end_date, freq=freq)
-            data_tmp = data_tmp.sort_values(by="trade_date").reset_index(drop=True)
+            
             # 针对周k不需要更新的情况
-            if len(data_tmp) == 0:
+            if data_tmp is None:
                 return
+            
+            data_tmp = data_tmp.sort_values(by="trade_date").reset_index(drop=True)
             
             # 在 data_tmp中构造data中所有的列，以便和data合并
             for column in data.columns:
@@ -143,11 +160,11 @@ def pull_data(ts_code, root_dir, freq=None, adj='qfq'):
             
             # 将data的最后一行数据插入到data_tmp中，以便计算macd,dif,eda
             data_last = pd.DataFrame(np.array(data.iloc[-1]).reshape(1,-1), columns=data_tmp.columns)
-            data_tmp = pd.concat([data_last, data_tmp], ignore_index=True)
+            data_tmp = pd.concat([data_last, data_tmp], sort=True).reset_index(drop=True)
             
             # 计算结果并和data合并
             data_tmp = cal_macd(data_tmp, update)
-            data = pd.concat([data, data_tmp.drop(0)], ignore_index=True)
+            data = pd.concat([data, data_tmp.drop(0)], sort=True)
     
     # 初始化数据
     else:
@@ -189,3 +206,14 @@ def get_industry_concept(industry_list, concept_list):
                 stock_list.append(i[:6] + ".SH")
     
     return stock_list
+
+def pull_holder_num(ts_code, root_dir):
+    
+    root_dir = os.path.join(root_dir, "holder_num")
+    root_dir = os.path.join(root_dir, "{}.csv".format(ts_code))
+    
+    end_date = date_util.get_current_date()
+    
+    data = pro.stk_holdernumber(ts_code=ts_code, end_date=end_date)
+    
+    data.to_csv(root_dir, index=False)

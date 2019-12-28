@@ -16,14 +16,14 @@ def get_weekk_condidate_stock(trade_date=None, stock_list_dir=None, stock_list_r
         return "please check the date format. for example, \'20191010\'"
     
     if stock_list_dir is None:
-        stock_list_dir = "../data_pulled/stock_date_2018119_delta_priceNone.csv"
+        stock_list_dir = "../data_pulled/stock_date_delta_priceNone.csv"
     
     if stock_list_root is not None:
         stock_list = stock_list_root
     else:
         stock_list = pd.read_csv(stock_list_dir)
     
-    raw_choose = {"name":[], "stock_code":[], "dif_dea":[]}
+    raw_choose = {"name":[], "stock_code":[]}
     
     ROOT_PATH = os.path.join("..", "data_pulled")
     ROOT_PATH = os.path.join(ROOT_PATH, "week")
@@ -39,8 +39,7 @@ def get_weekk_condidate_stock(trade_date=None, stock_list_dir=None, stock_list_r
         else:
             stock_code = stock_list.iloc[i]["ts_code"]
             
-        name = None
-#         name = stock_list.iloc[i]["name"]
+        name = stock_list.iloc[i]["name"]
         
         if stock_code + '.csv' in stock_csv_list:
             stock_csv_list_index = stock_csv_list.index(stock_code + '.csv')
@@ -53,29 +52,16 @@ def get_weekk_condidate_stock(trade_date=None, stock_list_dir=None, stock_list_r
             else:
                 cur_index = cur_index[-1]
             
-#             cur_macd = cur_detail.iloc[cur_index]["macd"]
-#             last_macd = cur_detail.iloc[cur_index-1]["macd"]
+            cur_macd = cur_detail.iloc[cur_index]["macd"]
+            last_macd = cur_detail.iloc[cur_index-1]["macd"]
             
-            cur_dif = cur_detail.iloc[cur_index]["diff"]
-            cur_dea = cur_detail.iloc[cur_index]["dea"]
-            last_dif = cur_detail.iloc[cur_index-1]["diff"]
-            last_dea = cur_detail.iloc[cur_index-1]["dea"]
-            
-            cur_ema12 = cur_detail.iloc[cur_index]["ema12"]
             cur_ema26 = cur_detail.iloc[cur_index]["ema26"]
+            last_ema26 = cur_detail.iloc[cur_index-5]["ema26"]
+            llast_ema26 = cur_detail.iloc[cur_index-10]["ema26"]
             
-#             month_ema12 = cur_detail.iloc[cur_index-3]["ema12"]
-#             month_ema26 = cur_detail.iloc[cur_index-3]["ema26"]
-            
-            dif_dea_mean = (abs(cur_dif - cur_dea) + abs(last_dif - last_dea)) / 2
-            
-#             if cur_macd > 0 and last_macd > 0:
-#                 if cur_dea > 0 and cur_dif > 0:
-#                     if cur_ema12-cur_ema26 > month_ema12-month_ema26 :
-            
-            raw_choose["name"].append(name)
-            raw_choose["stock_code"].append(stock_code)
-            raw_choose["dif_dea"].append(dif_dea_mean)
+            if cur_macd > last_macd and cur_ema26 > last_ema26 and last_ema26 > llast_ema26:
+                raw_choose["name"].append(name)
+                raw_choose["stock_code"].append(stock_code)
 
     return trade_date, raw_choose
 

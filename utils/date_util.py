@@ -92,7 +92,7 @@ def get_next_n_day(date=None, n_day=5):
     return tramsform_datetime_to_str(date)
 
 def get_work_day_range(start_date, end_date):
-    data_tmp = pd.read_csv("../data_pulled/day/000001.SZ.csv")
+    data_tmp = pd.read_csv("../data_pulled/day/000002.SZ.csv")
     
     star_port = data_tmp["trade_date"]>=int(start_date)
     end_port = data_tmp["trade_date"]<int(end_date)
