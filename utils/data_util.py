@@ -14,7 +14,7 @@ auth('15211097884','097884')
 
 pro = token_util.set_token()
 
-def get_stock_list(month_before=12, delta_price=None):
+def get_stock_list(month_before=12, delta_price=None, total_mv=100):
     
     """
     month_before : 获取n个月之前所有上市公司的股票列表，
@@ -29,15 +29,17 @@ def get_stock_list(month_before=12, delta_price=None):
     stock_list = pro.stock_basic(exchange='', list_status='L', fields='ts_code,name,market,list_date')
     
     # 去除创业板和科创板股票
-    stock_list1 = stock_list[~stock_list['market'].isin(["创业板", "科创板"])].reset_index(drop=True)
+    stock_list1 = stock_list[~stock_list['market'].isin(["科创板"])].reset_index(drop=True)
     
-    # 去除ST，银行和证券公司股票
+    # 去除ST，银行，证券和国企的股票
     index_list = []
     for i in range(len(stock_list1)):
         if '银行' in stock_list1.iloc[i]['name'] \
             or 'ST' in stock_list1.iloc[i]['name'] \
-                or '证券' in stock_list1.iloc[i]['name'] :
-                    index_list.append(i)
+                or '证券' in stock_list1.iloc[i]['name'] \
+                    or '中' in stock_list1.iloc[i]['name'] \
+                        or '国' in stock_list1.iloc[i]['name'] :
+                            index_list.append(i)
                 
     for i in index_list:
         stock_list1 = stock_list1.drop(i)
@@ -69,7 +71,21 @@ def get_stock_list(month_before=12, delta_price=None):
             
         stock_list = stock_list[stock_list["price"] <= delta_price]
     
-    stock_list = stock_list.reset_index(drop=True)
+    # 去除市值在x亿之下的公司
+    if total_mv is not None:
+        for i in range(len(stock_list)):
+
+            try:
+
+                df = pro.daily_basic(ts_code=stock_list["ts_code"][i], \
+                                     trade_date=trade_date, fields='ts_code,total_mv')
+                stock_list.loc[i, "total_mv"] = df.loc[0, "total_mv"] if df.empty is False else 0
+
+            except:
+                time.sleep(3)
+
+        stock_list = stock_list[stock_list["total_mv"] > total_mv * 10000].reset_index(drop=True)
+    
     stock_list.to_csv("./data_pulled/stock_date_delta_price{}.csv".format(delta_price), index=False)
     
     return stock_list
