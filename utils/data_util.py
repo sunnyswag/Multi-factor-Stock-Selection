@@ -14,7 +14,7 @@ auth('15211097884','097884')
 
 pro = token_util.set_token()
 
-def get_stock_list(month_before=12, delta_price=None, total_mv=100):
+def get_stock_list(month_before=12, trade_date='20200410', delta_price=None, total_mv=1000):
     
     """
     month_before : 获取n个月之前所有上市公司的股票列表，
@@ -24,7 +24,6 @@ def get_stock_list(month_before=12, delta_price=None, total_mv=100):
     
     TIPS : delta_price 和今天的股价进行比较 
     """
-    trade_date = date_util.get_current_date()
     
     stock_list = pro.stock_basic(exchange='', list_status='L', fields='ts_code,name,market,list_date')
     
@@ -37,8 +36,7 @@ def get_stock_list(month_before=12, delta_price=None, total_mv=100):
         if '银行' in stock_list1.iloc[i]['name'] \
             or 'ST' in stock_list1.iloc[i]['name'] \
                 or '证券' in stock_list1.iloc[i]['name'] \
-                    or '中' in stock_list1.iloc[i]['name'] \
-                        or '国' in stock_list1.iloc[i]['name'] :
+                    or '中' in stock_list1.iloc[i]['name'] :
                             index_list.append(i)
                 
     for i in index_list:
@@ -71,7 +69,7 @@ def get_stock_list(month_before=12, delta_price=None, total_mv=100):
             
         stock_list = stock_list[stock_list["price"] <= delta_price]
     
-    # 去除市值在x亿之下的公司
+    # 去除市值在x亿之上的公司
     if total_mv is not None:
         for i in range(len(stock_list)):
 
@@ -84,7 +82,7 @@ def get_stock_list(month_before=12, delta_price=None, total_mv=100):
             except:
                 time.sleep(3)
 
-        stock_list = stock_list[stock_list["total_mv"] > total_mv * 10000].reset_index(drop=True)
+        stock_list = stock_list[stock_list["total_mv"] < total_mv * 10000].reset_index(drop=True)
     
     stock_list.to_csv("./data_pulled/stock_date_delta_price{}.csv".format(delta_price), index=False)
     
