@@ -14,7 +14,7 @@ auth('15211097884','097884')
 
 pro = token_util.set_token()
 
-def get_stock_list(month_before=12, trade_date='20200410', delta_price=None, total_mv=1000):
+def get_stock_list(month_before=12, trade_date='20200410', delta_price=None, total_mv=1000, pe_ttm=True):
     
     """
     month_before : 获取n个月之前所有上市公司的股票列表，
@@ -28,16 +28,15 @@ def get_stock_list(month_before=12, trade_date='20200410', delta_price=None, tot
     stock_list = pro.stock_basic(exchange='', list_status='L', fields='ts_code,name,market,list_date')
     
     # 去除创业板和科创板股票
-    stock_list1 = stock_list[~stock_list['market'].isin(["科创板"])].reset_index(drop=True)
+    stock_list1 = stock_list[~stock_list['market'].isin(["科创板","创业板"])].reset_index(drop=True)
     
     # 去除ST，银行，证券和国企的股票
     index_list = []
     for i in range(len(stock_list1)):
         if '银行' in stock_list1.iloc[i]['name'] \
             or 'ST' in stock_list1.iloc[i]['name'] \
-                or '证券' in stock_list1.iloc[i]['name'] \
-                    or '中' in stock_list1.iloc[i]['name'] :
-                            index_list.append(i)
+                or '证券' in stock_list1.iloc[i]['name'] :
+                    index_list.append(i)
                 
     for i in index_list:
         stock_list1 = stock_list1.drop(i)
@@ -83,6 +82,22 @@ def get_stock_list(month_before=12, trade_date='20200410', delta_price=None, tot
                 time.sleep(3)
 
         stock_list = stock_list[stock_list["total_mv"] < total_mv * 10000].reset_index(drop=True)
+    
+    # pe_ttm为None且10~200的公司
+    if pe_ttm is True:
+        for i in range(len(stock_list)):
+
+            try:
+
+                df = pro.daily_basic(ts_code=stock_list["ts_code"][i], \
+                                    trade_date=trade_date, fields='ts_code,pe_ttm')
+                stock_list.loc[i, "pe_ttm"] = df.loc[0, "pe_ttm"] if df.empty is False else None
+
+            except:
+                time.sleep(3)
+
+        stock_list = stock_list[stock_list['pe_ttm'] > 10]
+        stock_list = stock_list[stock_list['pe_ttm'] < 200].dropna().reset_index(drop=True)
     
     stock_list.to_csv("./data_pulled/stock_date_delta_price{}.csv".format(delta_price), index=False)
     
