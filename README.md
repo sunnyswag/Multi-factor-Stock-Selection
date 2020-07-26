@@ -18,7 +18,7 @@
 
 ## Getting Started
 
-没用到ml&&dl，逻辑判断选股
+没用到 ml && dl ，仅仅通过逻辑判断选股
 
 ### Requirements
 
