@@ -1,106 +1,49 @@
-# auto_stocken
-自动选股，自动交易
+# Multi-factor Stock Selection
 
-## 选股策略(短线)
+计划你的交易，交易你的计划
 
-1. n-grid法则
+## Introduction
 
-2. 周k符合入场条件，持续观察
+这是关于**多因子选股**的项目，~~自动交易部分已经archive~~
 
-3. 机器学习
-指标：
-上证指数：今日涨跌幅，今日macd，昨日macd，前3日涨跌幅
-个股：今日
+交易前期(1-3年)具有参考价值，有需要的朋友可以自取。
 
-4.  
-```python
+不过，个人看来，这是在自己投资交易前期，为了感动自己所做的一些工作。
 
+不做不知道，做完才可以决定将这条路pass掉
 
-# 进场:
-# 周k 判断
-if macd > macd_before and  dif 和 dea 都在增加:
-    加入待选池
+近期交易策略 [在此](http://note.youdao.com/noteshare?id=3f34f9c3cceddd406fe18dc218f061ce&sub=5B475C8834D34C269472DCDA56B18710) 查看
 
-# 日k 判断
-if MACD刚开始大于0 and 未过度上涨:
-    if 今天的 dif 比 dea大
-        if 0 < dif  and 0 < dea :
-            condiction = True
-            
-if 今天，昨天，前天的macd都大于0 and 未过度上涨:
-    if 前天macd > 昨天macd and 今天macd > 昨天macd:
-        if 今天dea的值大于昨天的 and 昨天大于前天的 and  昨天dea > 0:
-            if 昨天macd > 昨天dea :
-                condition = True
-        
-if condition = True:
-    # 财报判断
-    if 上个季度财报营业收入高于这个季度 两个季度中利润都为正值:
-        加入日k待选池
-        加入进场池
-     
-对股票排序()
+**这个世界不存在取款机**，也不缺少幻想着取款机的傻瓜
 
-进场()
+## Getting Started
 
-def 对股票排序():
-    
-    周k dif和dea的差值  * 0.3 # 无需除上市价，因为如果市价很低，而且涨势很小的话，只能赚个手续费
-    近两季度营业额的差值/平均值  * 0.15
-    近一个月成交额均值 * 0.2
-    近半个月成交额均值 / 近一个月成交额均值 * 0.2
-    
-    列归一化再求和    
+没用到ml&&dl，逻辑判断选股
 
+### Requirements
 
-def 进场():
-    选择vol高的,去除vol大于4的
-    本周最后一个交易日不进场
+1. tushare ：主要的数据获取平台，需要注册账号并获取tushare码
+2. joinquant ：数据非常全面，不过很多都用不到，同样需要进行注册
+3. python
+4. jupyter-lab：编辑器。如何使用请自行学习
 
-def 出场():
-    前五天不管，五天后再看，
-        若五天内涨幅不超过5%，则卖出
-        若五天内表现不稳定，则卖出
-    根据成交额来决定是否卖出，若涨幅超过10%，且明天涨幅不超过0.5%，则在后天优卖出
-    
-# 出场:
-    
-    # 方案：使用，前1，前0天平均值进行测试
-    
-    昨天交易量平均值 = (前天交易量 + 昨天交易量) / 2
-    今天交易量平均值 = (昨天交易量 + 今天交易量) / 2
-    
-    if 涨幅超过 4% or 今天交易量平均值 <= 昨天交易量平均值:
-        准备出场()
-        
-def 准备出场():
-    if 明天下跌 < -0.5%(和所盈利的百分比有关):
-        出场()
-        
+### Installation
 
-# 持仓的数据状态结构
+1. 下载依赖包
 
-class Deal:
-    def __init__(self):
-        self.xxx = xxx
-        self.stock_log = pd.DataFrame([xxx])
+   ```
+   pip install -r requirements.txt
+   ```
 
-past_deal = [ , dtype=Deal] # 记录已完成的交易
-current_deal = [, dtype=Deal] # 记录正在进行的交易
-all_stock_log = pd.DataFrame([xxx]) # 记录每支股票的交易
+2. 打开 [./utils/token_util.py](./utils/token_util.py) 更换tushare码
+3. 打开并运行[./pull_data.ipynb](./pull_data.ipynb) ，会自动新建 ```./data_pulled``` 文件夹，并将爬取好的股票数据储存在该文件夹下
+4. 打开 [/test](/test) 文件夹运行你想获取的数据
 
+## Future Work
 
-```
-1. 使用‘20190830’这天的数据进行尝试，发现符合要求的有87个，按照要求排序后发现前面的效果都非常差
-    改进：只取MACD大于0的股票；只提取近3天涨幅并乘上0.5；提取近两周成交量
-2. 对不同的股盘分别处理，大股盘，中股盘，小股盘
-    
-## 选股策略(中线)
-    周k入场，日k离场
+以后大概率不会进行更新了，有需要的朋友可以自取
 
+通过多因子选股，找到的肯定是处在上升周期的公司。那么这些公司的上升阶段还会持续，抑或是已经结束了呢？
 
-## 选股策略(长线)
+更多的精力应该放到行业及公司的研究上，周期的波谷，往往是最佳的布局时机。而这，多因子选股无法做到
 
-
-## IDEA
-1. MACD和价格有关

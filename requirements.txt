@@ -1,0 +1,7 @@
+numpy
+pandas
+datetime
+tushare
+jqdatasdk
+matplotlib
+jupyter
